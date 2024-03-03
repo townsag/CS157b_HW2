@@ -2,19 +2,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
-public class Hash_Table {
-    private int numAttributes;
-    private List<Integer> columnHashRanges;
-    private String tableName;
-
-    public Hash_Table(List<Integer> cHR, String name) {
-        this.columnHashRanges = cHR;
-        this.numAttributes = cHR.size();
-        this.tableName = name;
-    }
-
-    public int partitionedHash(List<String> attributes) throws IllegalArgumentException {
-        if (attributes.size() != numAttributes) {
+public class Util {
+    public static int partitionedHash(List<String> attributes, List<Integer> columnHashRanges)
+            throws IllegalArgumentException {
+        if (attributes.size() != columnHashRanges.size()) {
             throw new IllegalArgumentException("the number of attributes sent to the partitioned hash" +
                     "function does not match the number of attributes in the table");
         }
@@ -24,7 +15,7 @@ public class Hash_Table {
             md = MessageDigest.getInstance("MD5");
 
             int runningHashValue = 0b00;
-            for (int i = 0; i < this.numAttributes; i++) {
+            for (int i = 0; i < columnHashRanges.size(); i++) {
                 md.update(attributes.get(i).getBytes());
                 int hashResult = bytesToInt(md.digest());
                 int bitmask = (1 << columnHashRanges.get(i).intValue()) - 1;
@@ -49,7 +40,7 @@ public class Hash_Table {
         return -1;
     }
 
-    private int bytesToInt(byte[] bytes) {
+    private static int bytesToInt(byte[] bytes) {
         int result = 0;
         // the math.min ensures that the byte array fits in a normal java int
         for (int i = 0; i < Math.min(bytes.length, 4); i++) {

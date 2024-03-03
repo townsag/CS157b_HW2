@@ -1,0 +1,3 @@
+c MyFavoriteTable 4 5 3
+c MyOtherTable 4 5 3 5
+c MyLeaseFavoriteTable 4 3
