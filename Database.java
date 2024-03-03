@@ -1,4 +1,7 @@
+import java.io.BufferedReader;
 import java.sql.*;
+import java.io.FileReader;
+import java.io.IOException;
 public class Database {
     private String dbName;
     private String instructions;
@@ -8,7 +11,6 @@ public class Database {
         this.dbName = db_name;
         this.instructions = instructions;
         this.connectToDbms(db_name);
-        this.make_hash(db_name, instructions);
     }
 
     public boolean connectToDbms(String db_name){
@@ -65,7 +67,42 @@ public class Database {
         }
     }
 
-    public void make_hash(String db_name, String instructions){
+    public void parse_instructions(String instructions){
+        String fileName = instructions;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(instructions))){
+            String line;
+            while ((line = br.readLine()) != null){
+                String[] words = line.split("\\s+");
+                if(words[0].equals("c")){
+                    create_table();
+                }
+                else if(words[0].equals("i")){
+                    insert_into_table();
+                }
+                else if(words[0].equals("l")){
+                    lookup_in_table();
+                }
+                else{
+                    System.out.println("Please enter one of the following format: \nc table_name col_1_hash_range col_2_hash_range  ... col_n_hash_range" +
+                            "\ni table_name col_1_value col_2_value ... col_n_value" +
+                            "\nl table_name use_index_or_not col_choice_1 ... col_choice_n");
+                }
+            }
+        } catch(IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void create_table(){
+
+    }
+
+    public void insert_into_table(){
+
+    }
+
+    public void lookup_in_table(){
 
     }
 }
