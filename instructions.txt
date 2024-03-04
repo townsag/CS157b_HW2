@@ -2,5 +2,8 @@ c MyFavoriteTable 4 5 3
 i MyFavoriteTable peperoni pizza party
 i MyFavoriteTable nacho pizza fusion
 i MyFavoriteTable anchovie pizza disaster
-l MyFavoriteTable * pizza *
-l MyFavoriteTable nacho * *
+i MyFavoriteTable peperoni nacho salad
+l MyFavoriteTable True * pizza *
+l MyFavoriteTable True anchovie pizza disaster
+l MyFavoriteTable False anchovie pizza disaster
+l MyFavoriteTable True anchovie pizza party
