@@ -3,7 +3,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 public class Util {
-    public static int partitionedHash(List<String> attributes, List<Integer> columnHashRanges)
+    public static long partitionedHash(List<String> attributes, List<Integer> columnHashRanges)
             throws IllegalArgumentException {
         if (attributes.size() != columnHashRanges.size()) {
             throw new IllegalArgumentException("the number of attributes sent to the partitioned hash" +
@@ -14,21 +14,21 @@ public class Util {
         try {
             md = MessageDigest.getInstance("MD5");
 
-            int runningHashValue = 0b00;
+            long runningHashValue = 0b00;
             for (int i = 0; i < columnHashRanges.size(); i++) {
                 md.update(attributes.get(i).getBytes());
                 int hashResult = bytesToInt(md.digest());
                 int bitmask = (1 << columnHashRanges.get(i).intValue()) - 1;
                 // System.out.println("i: " + Integer.toString(i) + ", running hash: " +
-                // Integer.toBinaryString(runningHashValue));
+                //         Long.toBinaryString(runningHashValue));
                 // System.out.println("md5 hash result: " + Integer.toBinaryString(hashResult));
                 // System.out.println("bitmask: " + Integer.toBinaryString(bitmask));
                 runningHashValue <<= columnHashRanges.get(i).intValue();
                 // System.out.println("running hash After shift: " +
-                // Integer.toBinaryString(runningHashValue));
+                //         Long.toBinaryString(runningHashValue));
                 runningHashValue |= (hashResult & bitmask);
                 // System.out.println("running hash After bitwise or: " +
-                // Integer.toBinaryString(runningHashValue) + "\n");
+                //         Long.toBinaryString(runningHashValue) + "\n");
                 md.reset();
             }
             return runningHashValue;
