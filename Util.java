@@ -20,18 +20,34 @@ public class Util {
                 int hashResult = bytesToInt(md.digest());
                 int bitmask = (1 << columnHashRanges.get(i).intValue()) - 1;
                 // System.out.println("i: " + Integer.toString(i) + ", running hash: " +
-                //         Long.toBinaryString(runningHashValue));
+                // Long.toBinaryString(runningHashValue));
                 // System.out.println("md5 hash result: " + Integer.toBinaryString(hashResult));
                 // System.out.println("bitmask: " + Integer.toBinaryString(bitmask));
                 runningHashValue <<= columnHashRanges.get(i).intValue();
                 // System.out.println("running hash After shift: " +
-                //         Long.toBinaryString(runningHashValue));
+                // Long.toBinaryString(runningHashValue));
                 runningHashValue |= (hashResult & bitmask);
                 // System.out.println("running hash After bitwise or: " +
-                //         Long.toBinaryString(runningHashValue) + "\n");
+                // Long.toBinaryString(runningHashValue) + "\n");
                 md.reset();
             }
             return runningHashValue;
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println("error in partitionedHash function");
+            e.printStackTrace();
+            System.exit(1);
+        }
+        return -1;
+    }
+
+    public static int hashOneValue(String value, int range) {
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("MD5");
+            md.update(value.getBytes());
+            int hashResult = bytesToInt(md.digest());
+            int bitmask = (1 << range) - 1;
+            return hashResult & bitmask;
         } catch (NoSuchAlgorithmException e) {
             System.out.println("error in partitionedHash function");
             e.printStackTrace();
