@@ -108,45 +108,14 @@ public class Database {
         String[] args = argumentsString.split(" ");
         String tableName = args[0];
         int numColumns = args.length - 1;
-        String sqlInsertTable = "INSERT INTO PH_TABLE (NAME, NUM_COLUMNS, LAST_ROW) VALUES (?, ?, ?)";
-        String sqlInsertColRange = "INSERT INTO PH_COL_RANGES (TABLE_ID, COL_NUM, COL_RANGE) VALUES (?, ?, ?)";
-        int newID = -1;
-        int runningColumnRangeSum = 0;
+
+        int newID;
+        List<Integer> columnRanges = List.of(Arrays.copyOfRange(args, 1, args.length))
+                                         .stream().map(Integer::parseInt)
+                                         .collect(Collectors.toList());
         try{
-            PreparedStatement insertStatementTable = 
-                connection.prepareStatement(sqlInsertTable, PreparedStatement.RETURN_GENERATED_KEYS);
-            PreparedStatement insertStatementColRanges = 
-                connection.prepareStatement(sqlInsertColRange);
-            insertStatementTable.setString(1, tableName);
-            insertStatementTable.setInt(2, numColumns);
-            insertStatementTable.setInt(3, 1);
-            insertStatementTable.executeUpdate();
-            ResultSet keys = insertStatementTable.getGeneratedKeys();
-            if (keys.next()) {
-                newID = keys.getInt(1);
-            } else {
-                System.out.println("No auto-generated keys returned.");
-                System.exit(1);
-            }
-
-            for(int i = 1; i < args.length; i++){
-                if (Integer.parseInt(args[i]) < 1){
-                    System.out.println("error creating table: " + tableName + ", non-positive hash range");
-                    System.out.println("column num: " + Integer.toString(i) + ", range value: " + args[i]);
-                }
-                runningColumnRangeSum += Integer.parseInt(args[i]);
-                if (runningColumnRangeSum > 64) {
-                    System.out.println("Sum of the bits for the columns exceeds 64 for table: " + tableName);
-                    System.exit(1);
-                }
-                insertStatementColRanges.setInt(1, newID);
-                insertStatementColRanges.setInt(2, i);
-                insertStatementColRanges.setInt(3, Integer.parseInt(args[i]));
-                insertStatementColRanges.executeUpdate();
-            }
-            insertStatementTable.close();
-            insertStatementColRanges.close();
-
+            newID = insertTableData(tableName, numColumns);
+            insertColumnRanges(tableName, columnRanges, newID);
         } catch (SQLException e) {
             System.out.println("error creating table: " + tableName);
             e.printStackTrace();
@@ -224,6 +193,57 @@ public class Database {
     public void lookup_in_table() {
 
     }
+
+    // ========== helper functions for create table ========== //
+
+    private int insertTableData(String tableName, int numColumns) throws SQLException{
+        int newID = -1;
+        String sqlInsertTable = "INSERT INTO PH_TABLE (NAME, NUM_COLUMNS, LAST_ROW) VALUES (?, ?, ?)";
+        PreparedStatement insertStatementTable = 
+                connection.prepareStatement(sqlInsertTable, PreparedStatement.RETURN_GENERATED_KEYS);
+        insertStatementTable.setString(1, tableName);
+        insertStatementTable.setInt(2, numColumns);
+        insertStatementTable.setInt(3, 1);
+        insertStatementTable.executeUpdate();
+        ResultSet keys = insertStatementTable.getGeneratedKeys();
+        if (keys.next()) {
+            newID = keys.getInt(1);
+        } else {
+            System.out.println("No auto-generated keys returned.");
+            System.exit(1);
+        }
+        insertStatementTable.close();
+        return newID;
+    }
+
+    private void insertColumnRanges(String tableName, List<Integer> columnRanges, int tableID) throws SQLException {
+        String sqlInsertColRange = "INSERT INTO PH_COL_RANGES (TABLE_ID, COL_NUM, COL_RANGE) VALUES (?, ?, ?)";
+        PreparedStatement insertStatementColRanges = connection.prepareStatement(sqlInsertColRange);
+        int runningColumnRangeSum = 0;
+        
+        // design choice java array list is zero indexed but sql table is one indexed
+        for(int i = 0; i < columnRanges.size(); i++){
+            if (columnRanges.get(i).intValue() < 1){
+                System.out.println("error creating table: " + tableName + ", non-positive hash range");
+                System.out.println("column num: " + Integer.toString(i + 1) + ", range value: " + columnRanges.get(i).intValue());
+            }
+            runningColumnRangeSum += columnRanges.get(i).intValue();
+            if (runningColumnRangeSum > 64) {
+                System.out.println("Sum of the bits for the columns exceeds 64 for table: " + tableName);
+                System.exit(1);
+            }
+            insertStatementColRanges.setInt(1, tableID);
+            insertStatementColRanges.setInt(2, i + 1);
+            insertStatementColRanges.setInt(3, columnRanges.get(i).intValue());
+            insertStatementColRanges.executeUpdate();
+        }
+        // insertStatementTable.close();
+        insertStatementColRanges.close();
+
+    }
+
+
+    // ========== helper functions for insert in table ========== //
 
     private List<Integer> lookupPHTable(String name) throws SQLException{
         String sql = "SELECT TABLE_ID, NUM_COLUMNS, LAST_ROW FROM PH_TABLE WHERE NAME = ?";
