@@ -83,7 +83,7 @@ public class Database {
                 } else if (words[0].equals("i")) {
                     insert_into_table(words[1]);
                 } else if (words[0].equals("l")) {
-                    lookup_in_table();
+                    lookup_in_table(words[1]);
                 } else {
                     System.out.println(
                             "Please enter one of the following format: \nc table_name col_1_hash_range col_2_hash_range  ... col_n_hash_range"
@@ -132,50 +132,29 @@ public class Database {
      */
     public void insert_into_table(String argumentString) {
         // resetrict inserts to not be of the symbol *
-        
-        // output INSERT table_name on success
+
         String[] args = argumentString.split(" ");
         String tableName = args[0];
         int numColumnsArg = args.length - 1;
         List<String> argsList = new ArrayList<>(Arrays.asList(args));
         List<String> valuesList = argsList.subList(1, argsList.size());
-        // System.out.println("table name: " + tableName);
-        // System.out.println("num cols arg: " + Integer.toString(numColumnsArg));
-
 
         try {
             // check that the number of columns in the insert matches the number of columns in table
-            List<Integer> lookupResult = lookupPHTable(tableName);
-            int tableID = lookupResult.get(0);
-            int numColumns = lookupResult.get(1);
-            int lastRow = lookupResult.get(2);
+            TableInfo lookupResult = lookupPHTable(tableName);
+            int tableID = lookupResult.getID();
+            int numColumns = lookupResult.getNumColumns();
+            int lastRow = lookupResult.getLastRow();
             if (numColumnsArg != numColumns){
                 System.out.println("error encountered when trying to insert: " + argumentString);
                 System.out.println("num columns in insert does not match num columns in table");
                 System.exit(1);
             }
-            // System.out.println("table id: " + Integer.toString(tableID));
-            // System.out.println("num cols: " + Integer.toString(numColumns));
-            // System.out.println("last row: " + Integer.toString(lastRow));
 
             List<Pair<Integer, Integer>> columnNumRangePairs = lookupHashInfo(tableID);
             List<Integer> columHashRanges = columnNumRangePairs.stream()
                                             .map(Pair::getSecond)
                                             .collect(Collectors.toList());
-            // System.out.println("printing column num, range pairs: ");
-            // for (Pair<Integer, Integer> pair : columnNumRangePairs) {
-            //     System.out.print("(" + Integer.toString(pair.getFirst()) + ", " + Integer.toString(pair.getSecond()) + ") ");
-            // } System.out.println();
-
-            // System.out.println("\nPrinting column hash ranges");
-            // for (Integer elem : columHashRanges) {
-            //     System.out.print(Integer.toString(elem) + ", ");
-            // } System.out.println();
-
-            // System.out.println("\nPrinting values list");
-            // for (String value : valuesList) {
-            //     System.out.print(value + ", ");
-            // } System.out.println();
 
             insertRow(tableID, lastRow, valuesList);
             updateLastRow(tableID, lastRow);
@@ -190,7 +169,34 @@ public class Database {
 
     }
 
-    public void lookup_in_table() {
+    /*
+     * This looks up all entries which match the sequence of column choices. The column choice "*" matches
+     *  any value. The total number of columns should match the number of columns of the original table 
+     * otherwise an information error should be printed. The output of this function should be all the 
+     * matching rows, 1/line (lines terminated with a newline character), with columns written as quoted 
+     * strings and with a single white-space between columns. For example: 
+     * l MyFavoriteTable true * relish *
+     * would output when processed (assuming the three insert columns above had previously been executed):
+     * 
+     * ketchup relish oregano
+     * A relish B
+     * 
+     * In the above, true indicates that the partition hash index should be used to compute the query results, 
+     * a false would indicate that it shouldn't be used. If the number of columns in this instruction does not 
+     * match the number of columns of the original table, an instructive error should be output and the 
+     * processing of the instructions file should stop.
+     * 
+     * A lookup, "l", command should look up the desired rows using only the first three tables if 
+     * use_index_or_not is false, and it should make constructive use of PH_HASH_BUCKETS if use_index_or_not 
+     * is true. Emulating on top of Sqlite it is hard to make exactly a faithful representation of a 
+     * partitioned hash table. Try though in the use_index_or_not is true case to be as efficient as 
+     * possible. This completes the description of the homework.
+     */
+    public void lookup_in_table(String argumentString) {
+        // try first to write naive lookup using only the first 3 tables
+        // check that the num of columns in the query string is similar to the num of columns for that table
+        // find the set of row numbers which satisfies the constraint for each column independently
+        // find the set representing the intersection of the sets for each column
 
     }
 
@@ -245,7 +251,7 @@ public class Database {
 
     // ========== helper functions for insert in table ========== //
 
-    private List<Integer> lookupPHTable(String name) throws SQLException{
+    private TableInfo lookupPHTable(String name) throws SQLException{
         String sql = "SELECT TABLE_ID, NUM_COLUMNS, LAST_ROW FROM PH_TABLE WHERE NAME = ?";
         PreparedStatement pStatement = this.connection.prepareStatement(sql);
         pStatement.setString(1, name);
@@ -258,7 +264,7 @@ public class Database {
         int numColumns = result.getInt(2);
         int lastRow = result.getInt(3);
         pStatement.close();
-        return List.of(tableID, numColumns, lastRow);
+        return new TableInfo(name, tableID, numColumns, lastRow);
     }
 
     private List<Pair<Integer, Integer>> lookupHashInfo(int tableID) throws SQLException {
@@ -286,6 +292,10 @@ public class Database {
         pStatement.setInt(1, tableID);
         pStatement.setInt(2, rowNum);
         for(int i = 0; i < valuesList.size(); i++){
+            if (valuesList.get(i).equals("*")) {
+                System.out.println("error insering a * character");
+                System.exit(1);
+            }
             pStatement.setInt(3, i + 1);
             pStatement.setString(4, valuesList.get(i));
             pStatement.executeUpdate();
@@ -314,6 +324,9 @@ public class Database {
         pStatement.executeUpdate();
         pStatement.close();
     }
+
+    // ========== Helper functions for lookup ========== //
+
 
 }
 
