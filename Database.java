@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.io.FileReader;
 import java.io.IOException;
@@ -197,7 +199,42 @@ public class Database {
         // check that the num of columns in the query string is similar to the num of columns for that table
         // find the set of row numbers which satisfies the constraint for each column independently
         // find the set representing the intersection of the sets for each column
+        String[] args = argumentString.split(" ");
+        String tableName = args[0];
+        List<String> argsList = new ArrayList<>(Arrays.asList(args));
+        List<String> valuesList = argsList.subList(1, argsList.size());
 
+        try {
+            TableInfo lookupTarget = lookupPHTable(tableName);
+            if(valuesList.size() != lookupTarget.getNumColumns()){
+                System.out.println("the number of rows in the lookup string does not" + 
+                                   "match the number of rows in the table for query: " + argumentString);
+                System.exit(1);
+            }
+            // design choice: list of sets with one set for each row is zero indexed but the rows in the
+            //                table are all one indexed 
+            List<Set<Integer>> validRowsPerColumn = new ArrayList<>(Collections.nCopies(valuesList.size(), null));
+            for (int i = 0; i < valuesList.size(); i++){
+                validRowsPerColumn.set(i, selectValidRows(lookupTarget.getID(), i + 1, valuesList.get(i)));
+            }
+
+            Set<Integer> intersectionRows = new HashSet<>(validRowsPerColumn.get(0));
+            for (int i = 1; i < validRowsPerColumn.size(); i++){
+                intersectionRows.retainAll(validRowsPerColumn.get(i));
+            }
+
+            // System.out.println("printing the intersection of the sets of valid rows for each column");
+            // for (Integer elem: intersectionRows){
+            //     System.out.print(elem.toString() + ", ");
+            // }
+            // System.out.println();
+            // at this point intersection rows holds all the valid rows
+            queryAndPrint(lookupTarget, intersectionRows);
+        } catch (SQLException e) {
+            System.out.println("error looking up information: " + argumentString);
+            e.printStackTrace();
+        }
+        
     }
 
     // ========== helper functions for create table ========== //
@@ -327,6 +364,62 @@ public class Database {
 
     // ========== Helper functions for lookup ========== //
 
+    private Set<Integer> selectValidRows(int tableID, int columnNum, String value) throws SQLException {
+        String sqlSelectRows = "SELECT ROW_NUM FROM PH_TABLE_ROWS WHERE TABLE_ID = ? AND COL_NUM = ? AND VALUE = ?";
+        String sqlSelectRowsStar = "SELECT ROW_NUM FROM PH_TABLE_ROWS WHERE TABLE_ID = ? AND COL_NUM = ?";
+        Set<Integer> validRows = new HashSet<>();
+        PreparedStatement pStatement;
+
+        if(value.equals("*")){
+            pStatement = this.connection.prepareStatement(sqlSelectRowsStar);
+            pStatement.setInt(1, tableID);
+            pStatement.setInt(2, columnNum); 
+        } else {
+            pStatement = this.connection.prepareStatement(sqlSelectRows);
+            pStatement.setInt(1, tableID);
+            pStatement.setInt(2, columnNum);
+            pStatement.setString(3, value);
+        }
+
+        ResultSet result = pStatement.executeQuery();
+        while(result.next()){
+            validRows.add(result.getInt(1));
+        }
+        pStatement.close();
+        System.out.println("Printing the valid rows in the set for column: " + columnNum);
+        for (Integer elem : validRows){
+            System.out.print(elem.toString() + ", ");
+        }
+        System.out.println();
+        return validRows;
+
+    }
+
+    private void queryAndPrint(TableInfo lookupTarget, Set<Integer> validRows) throws SQLException {
+        // for each row, query all the columns for that row, then print
+        // remember that columns in the sql databse are 1 indexed
+        // System.out.println("printing the valid rows in query and print");
+        // for (Integer elem: validRows){
+        //     System.out.print(elem.toString() + ", ");
+        // }
+        System.out.println();
+
+        List<Integer> validRowsList = new ArrayList<>(validRows);
+        Collections.sort(validRowsList);
+        String sqlSelectRow = "SELECT COL_NUM, VALUE FROM PH_TABLE_ROWS WHERE TABLE_ID = ? AND ROW_NUM = ? ORDER BY COL_NUM ASC";
+        PreparedStatement pStatement = this.connection.prepareStatement(sqlSelectRow);
+        pStatement.setInt(1, lookupTarget.getID());
+        for(int j = 0; j < validRowsList.size(); j++){
+            pStatement.setInt(2, validRowsList.get(j));
+            ResultSet resultSet = pStatement.executeQuery();
+            while(resultSet.next()){
+                String value = resultSet.getString(2);
+                System.out.print(value + " ");
+            }
+            System.out.println();
+        }
+        pStatement.close();
+    }
 
 }
 

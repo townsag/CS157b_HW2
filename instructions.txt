@@ -1,6 +1,6 @@
 c MyFavoriteTable 4 5 3
-c MyOtherTable 4 5 3 5
-c MyLeaseFavoriteTable 4 3
-i MyFavoriteTable peanut butter sandwich
-i MyFavoriteTable shrimp fried rice
-i MyOtherTable anchovies on my Pizza
+i MyFavoriteTable peperoni pizza party
+i MyFavoriteTable nacho pizza fusion
+i MyFavoriteTable anchovie pizza disaster
+l MyFavoriteTable * pizza *
+l MyFavoriteTable nacho * *
