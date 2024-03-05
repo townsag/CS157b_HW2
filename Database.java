@@ -427,7 +427,7 @@ public class Database {
         // for (Integer elem : validRows) {
         //     System.out.print(elem.toString() + ", ");
         // }
-        System.out.println();
+        // System.out.println();
         return validRows;
 
     }
@@ -457,7 +457,7 @@ public class Database {
             sqlSelectRowsBuilder.append(String.format(" AND FLOOR((HASH_BUCKET %% %d) / %d)  = %d", leftBound,
                     rightBound, expectedWordHash));
         }
-        System.out.println(sqlSelectRowsBuilder.toString());
+        // System.out.println(sqlSelectRowsBuilder.toString());
         Statement statement = this.connection.createStatement();
         ResultSet results = statement.executeQuery(sqlSelectRowsBuilder.toString());
         Set<Integer> validRows = new HashSet<>();
