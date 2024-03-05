@@ -1,4 +1,5 @@
 # CS157b_HW2
+Contributers: Andrew Townsend and Peter Guilhamet
 
 This is what my directory structure looks like:
 .
